@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Просмотр модели</title>
+    <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+    </script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f0f0f0; padding: 20px; }
+        .wrapper { max-width: 900px; margin: 0 auto; text-align: center; }
+        header { background: #4a5568; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .back { display: inline-block; background: #4299e1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-bottom: 15px; }
+        #canvas-container { width: 100%; height: 500px; background: #1a202c; border-radius: 8px; margin-bottom: 20px; }
+        .download { display: inline-block; background: #48bb78; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+        @media (max-width: 768px) { #canvas-container { height: 300px; } }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <header>
+            <a href="index.html" class="back">← Назад</a>
+            <h1 id="model-title">Модель</h1>
+        </header>
+        <div id="canvas-container"></div>
+        <a id="download-btn" href="#" download class="download">Скачать модель</a>
+    </div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const params = new URLSearchParams(window.location.search);
+        const modelId = params.get('id') || '1';
+        const models = {
+            '1': { file: 'models/стул.glb', title: 'стул' },
+            '2': { file: 'models/стол.glb', title: 'стол' },
+            '3': { file: 'models/робот.glb', title: 'Робот' }
+        };
+
+        const modelData = models[modelId];
+        document.getElementById('model-title').textContent = modelData.title;
+        document.getElementById('download-btn').href = modelData.file;
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a202c);
+
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 1, 3);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2.0;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+
+        const loader = new GLTFLoader();
+        loader.load(modelData.file, function(gltf) {
+            const model = gltf.scene;
+            scene.add(model);
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const scale = 2 / Math.max(size.x, size.y, size.z);
+            model.scale.setScalar(scale);
+            model.position.sub(center.multiplyScalar(scale));
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>
